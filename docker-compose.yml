@@ -1,0 +1,84 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: ciforce-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ciforce
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./backend/db/init:/docker-entrypoint-initdb.d:ro
+    networks:
+      - ciforce
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ciforce"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: ciforce-backend:latest
+    container_name: ciforce-backend
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
+    environment:
+      VEGA_RUNTIME_STORE: postgres
+      VEGA_RUNTIME_DATABASE_URL: postgresql://postgres:postgres@postgres:5432/ciforce
+      VEGA_CHECKPOINT_DB_PATH: /app/data/vega.db
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      # Persist SQLite checkpoint data across restarts.
+      - backend-data:/app/data
+      # Persist the u2net model so even if you `--no-cache` rebuild, the
+      # model the Dockerfile baked into the image isn't re-downloaded.
+      - rembg-models:/app/.u2net
+    ports:
+      - "8000:8000"
+    expose:
+      - "8000"
+    networks:
+      - ciforce
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  frontend:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+      args:
+        # Empty = use same-origin /api/... which nginx proxies to backend.
+        VITE_BACKEND_URL: ""
+    image: ciforce-frontend:latest
+    container_name: ciforce-frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "3000:80"
+    networks:
+      - ciforce
+
+networks:
+  ciforce:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  backend-data:
+  rembg-models:

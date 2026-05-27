@@ -1,0 +1,58 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-start: #3b82f6;
+  --color-brand-end: #1d4ed8;
+  --color-bg-dark: #020617;
+  --color-status-success: #10b981;
+  --color-status-warning: #f59e0b;
+  --color-status-error: #ef4444;
+  --color-accent-blue: #38bdf8;
+  --color-accent-slate: #94a3b8;
+  --color-accent-auto: #0ea5e9;
+  --color-accent-manual: #6366f1;
+  --color-accent-marketplace: #8b5cf6;
+  --color-accent-performance: #10b981;
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+@layer base {
+  body {
+    @apply bg-bg-dark text-slate-300 antialiased selection:bg-brand-start/20;
+    font-family: var(--font-sans);
+  }
+
+  ::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-slate-800 rounded-full hover:bg-slate-700 transition-colors;
+  }
+}
+
+.gradient-text {
+  @apply bg-clip-text text-transparent bg-linear-to-r from-brand-start to-accent-blue;
+}
+
+.glass-panel {
+  @apply bg-slate-900/40 backdrop-blur-xl border border-white/5 rounded-xl shadow-2xl;
+}
+
+.business-card {
+  @apply bg-slate-900/60 border border-white/5 rounded-xl hover:border-white/10 transition-all duration-300;
+}
+
+.ai-glow-blue {
+  box-shadow: 0 0 30px -10px rgba(59, 130, 246, 0.4);
+}
+
+.ai-glow-cyan {
+  box-shadow: 0 0 30px -10px rgba(14, 165, 233, 0.4);
+}
+
