@@ -708,6 +708,9 @@ export default function QuantCanvas() {
   const [flipped,   setFlipped]   = useState(false);
   const [activeAgent, setActiveAgent] = useState<PipelineNodeData | null>(null);
   const [productAgentActive, setProductAgentActive] = useState(false);
+  const [dockHoverIndex, setDockHoverIndex] = useState<number | null>(null);
+  const [dockDetailOpen, setDockDetailOpen] = useState(false);
+  const dockLayoutTransition = { type: 'spring' as const, stiffness: 280, damping: 32, mass: 0.65 };
 
   // Listen for product-shot agent clicks from inside its custom node.
   // Bumps a counter we treat as a one-shot signal.
@@ -1984,63 +1987,204 @@ export default function QuantCanvas() {
             </div>
           </div>
 
-          <div className="absolute left-4 bottom-4 z-10 max-w-[calc(100%-560px)] min-w-[520px] rounded-3xl border border-emerald-400/20 bg-[#06130f]/92 backdrop-blur-xl px-3.5 py-3.5 shadow-[0_18px_52px_rgba(0,0,0,0.50)]">
-            <div className="absolute inset-y-3 left-0 w-1 rounded-r-full bg-gradient-to-b from-emerald-300 via-teal-300 to-accent-blue" />
-            <div className="mb-3 flex items-center justify-between gap-3 pl-2">
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className="text-[12px] font-black text-emerald-200 uppercase tracking-widest">数字劳动力调度台</p>
-                  <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-2 py-0.5 text-[9px] font-bold text-emerald-300">
-                    当前团队 {WORKFORCE.length}
-                  </span>
-                </div>
-                <p className="mt-1 text-[9px] text-slate-500">
-                  这里是 Workspace 的可调度团队：拖到画布分配任务，后续接入成功率、成本和 ROI。
-                </p>
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <span className="hidden 2xl:inline-flex rounded-xl border border-white/[0.07] bg-white/[0.035] px-2.5 py-1.5 text-[10px] font-bold text-slate-400">
-                  可拖拽分配
-                </span>
-                <button
-                  onClick={() => navigate('/app', { state: { tab: 'marketplace' } })}
-                  className="rounded-xl border border-emerald-400/25 bg-emerald-400/12 px-2.5 py-1.5 text-[10px] font-bold text-emerald-300 hover:bg-emerald-400/18 transition-all"
-                >
-                  招募 / 配置
-                </button>
-              </div>
-            </div>
-            <div className="flex gap-2 overflow-x-auto custom-scrollbar pb-1">
-              {WORKFORCE.map(w => {
+          <motion.div
+            layout
+            transition={dockLayoutTransition}
+            className={cn(
+              'absolute left-1/2 bottom-5 z-10 -translate-x-1/2 transition-[width] duration-300',
+              dockDetailOpen ? 'w-[min(860px,calc(100%-48px))]' : 'w-[min(760px,calc(100%-48px))]',
+            )}
+          >
+            <motion.div
+              layout
+              transition={dockLayoutTransition}
+              className="mx-auto mb-2 flex w-fit items-center gap-2 rounded-full border border-emerald-400/15 bg-[#06130f]/80 px-3 py-1.5 backdrop-blur-xl shadow-[0_12px_32px_rgba(0,0,0,0.32)]"
+            >
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-300 shadow-[0_0_10px_rgba(110,231,183,0.85)]" />
+              <span className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-200">数字劳动力调度台</span>
+              <span className="text-[9px] font-bold text-slate-500">
+                当前团队 {WORKFORCE.length} · {dockDetailOpen ? '详情管理' : '拖拽分配'}
+              </span>
+              <button
+                onClick={() => setDockDetailOpen(v => !v)}
+                className={cn(
+                  'ml-1 rounded-full border px-2 py-0.5 text-[9px] font-bold transition-all',
+                  dockDetailOpen
+                    ? 'border-accent-blue/25 bg-accent-blue/12 text-accent-blue hover:bg-accent-blue/18'
+                    : 'border-white/[0.10] bg-white/[0.04] text-slate-400 hover:text-white hover:bg-white/[0.08]',
+                )}
+              >
+                {dockDetailOpen ? '收起' : '详情'}
+              </button>
+              <button
+                onClick={() => navigate('/app', { state: { tab: 'marketplace' } })}
+                className="ml-1 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-2 py-0.5 text-[9px] font-bold text-emerald-300 hover:bg-emerald-400/18 transition-all"
+              >
+                招募
+              </button>
+            </motion.div>
+
+            <motion.div
+              layout
+              transition={dockLayoutTransition}
+              className={cn(
+                'relative mx-auto flex rounded-[28px] border border-white/[0.10] bg-[#06130f]/82 backdrop-blur-2xl shadow-[0_22px_58px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.08)] custom-scrollbar',
+                dockDetailOpen
+                  ? 'w-full max-h-[248px] flex-wrap items-stretch justify-center gap-3 overflow-x-hidden overflow-y-auto px-4 pb-4 pt-5'
+                  : 'w-fit max-w-full items-end justify-center gap-2 overflow-x-auto px-4 pb-3 pt-4',
+              )}
+              onMouseLeave={() => setDockHoverIndex(null)}
+            >
+              <div className="pointer-events-none absolute inset-x-6 bottom-1 h-px bg-gradient-to-r from-transparent via-emerald-300/35 to-transparent" />
+              {WORKFORCE.map((w, index) => {
                 const s = KIND_STYLE[w.kind];
+                const distance = dockHoverIndex === null ? 4 : Math.abs(dockHoverIndex - index);
+                const scale = dockDetailOpen ? 1 : distance === 0 ? 1.34 : distance === 1 ? 1.18 : distance === 2 ? 1.06 : 1;
+                const lift = dockDetailOpen ? 0 : distance === 0 ? -18 : distance === 1 ? -9 : distance === 2 ? -3 : 0;
+                const showLabel = dockHoverIndex === index;
+
                 return (
-                  <div
+                  <motion.div
+                    layout
                     key={w.id}
                     draggable
-                    onDragStart={e => onDragStart(e, w.id)}
-                    className="group flex min-w-[170px] items-center gap-2.5 rounded-2xl border border-white/[0.07] bg-white/[0.04] px-3 py-2.5 hover:bg-white/[0.07] hover:border-emerald-400/20 transition-all cursor-grab active:cursor-grabbing"
-                    title="拖到画布中分配任务"
+                    onMouseEnter={() => setDockHoverIndex(index)}
+                    onDragStart={e => onDragStart(e as unknown as DragEvent, w.id)}
+                    animate={{ scale, y: lift }}
+                    transition={dockLayoutTransition}
+                    className={cn(
+                      'group relative shrink-0 cursor-grab rounded-2xl border border-white/[0.10] bg-white/[0.055] shadow-[0_10px_24px_rgba(0,0,0,0.28)] active:cursor-grabbing',
+                      dockDetailOpen
+                        ? 'flex h-[88px] basis-[190px] items-center gap-3 px-3 text-left hover:border-emerald-400/25 hover:bg-white/[0.075]'
+                        : 'flex h-[58px] w-[58px] items-center justify-center',
+                    )}
+                    title={`${w.name} · ${w.role} · 拖到画布中分配任务`}
                   >
-                    <div className="relative shrink-0">
-                      <img src={w.avatar} className="h-8 w-8 rounded-lg border border-white/10 bg-slate-800" alt={w.name} />
-                      <div className={cn(
-                        'absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-[#07111b]',
-                        w.status === 'active' ? 'bg-status-success' :
-                        w.status === 'processing' ? 'bg-accent-auto' : 'bg-slate-600',
-                      )} />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-[12px] font-bold text-white">{w.name}</p>
-                      <p className="truncate text-[9px] text-slate-500">{w.role}</p>
-                    </div>
-                    <span className={cn('shrink-0 rounded-full border px-1.5 py-0.5 text-[8px] font-bold', s.badge)} title="ROI / 绩效标签">
-                      {w.roi}
-                    </span>
-                  </div>
+                    <AnimatePresence>
+                      {showLabel && !dockDetailOpen && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 8, scale: 0.94 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: 6, scale: 0.96 }}
+                          transition={{ duration: 0.14 }}
+                          className="pointer-events-none absolute -top-14 left-1/2 w-max -translate-x-1/2 rounded-2xl border border-white/[0.10] bg-[#050a12]/92 px-3 py-2 text-center shadow-[0_14px_28px_rgba(0,0,0,0.45)] backdrop-blur-xl"
+                        >
+                          <p className="text-[11px] font-black text-white">{w.name}</p>
+                          <p className="mt-0.5 text-[9px] text-slate-500">{w.role}</p>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
+                    <motion.img
+                      layout
+                      transition={dockLayoutTransition}
+                      src={w.avatar}
+                      className={cn(
+                        'rounded-xl border border-white/10 bg-slate-800 object-cover shadow-[0_8px_18px_rgba(0,0,0,0.30)]',
+                        dockDetailOpen ? 'h-12 w-12 shrink-0' : 'h-11 w-11',
+                      )}
+                      alt={w.name}
+                    />
+                      <motion.div
+                        key="detail"
+                        layout
+                        aria-hidden={!dockDetailOpen}
+                        animate={{
+                          opacity: dockDetailOpen ? 1 : 0,
+                          width: dockDetailOpen ? 106 : 0,
+                          x: dockDetailOpen ? 0 : -6,
+                          filter: dockDetailOpen ? 'blur(0px)' : 'blur(3px)',
+                        }}
+                        transition={dockLayoutTransition}
+                        className="min-w-0 overflow-hidden"
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <p className="truncate text-[12px] font-black text-white">{w.name}</p>
+                          <motion.span
+                            layout
+                            className={cn('shrink-0 rounded-full border px-1.5 py-0.5 text-[7px] font-black', s.badge)}
+                          >
+                            {w.roi}
+                          </motion.span>
+                        </div>
+                        <p className="mt-1 truncate text-[9px] text-slate-500">{w.role}</p>
+                        <div className="mt-2 flex items-center gap-1.5 text-[8px] font-bold text-slate-600">
+                          <span className={cn(
+                            'h-1.5 w-1.5 rounded-full',
+                            w.status === 'active' ? 'bg-status-success' :
+                            w.status === 'processing' ? 'bg-accent-auto' : 'bg-slate-600',
+                          )} />
+                          <span>{w.status === 'active' ? '可立即调度' : w.status === 'processing' ? '执行中' : '待命'}</span>
+                        </div>
+                      </motion.div>
+                    <motion.div layout className={cn(
+                      'absolute bottom-1.5 right-1.5 h-2.5 w-2.5 rounded-full border-2 border-[#07111b]',
+                      w.status === 'active' ? 'bg-status-success shadow-[0_0_8px_rgba(16,185,129,0.85)]' :
+                      w.status === 'processing' ? 'bg-accent-auto shadow-[0_0_8px_rgba(14,165,233,0.85)]' : 'bg-slate-600',
+                    )} />
+                    <AnimatePresence initial={false}>
+                      {!dockDetailOpen && (
+                        <motion.span
+                          key="compact-roi"
+                          initial={{ opacity: 0, y: 4, scale: 0.9 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: 4, scale: 0.9 }}
+                          transition={{ duration: 0.14 }}
+                          className={cn('absolute -bottom-2 rounded-full border px-1.5 py-0.5 text-[7px] font-black shadow-lg', s.badge)}
+                          title="ROI / 绩效标签"
+                        >
+                          {w.roi}
+                        </motion.span>
+                      )}
+                    </AnimatePresence>
+                  </motion.div>
                 );
               })}
-            </div>
-          </div>
+
+              <motion.button
+                layout
+                type="button"
+                onClick={() => navigate('/app', { state: { tab: 'marketplace' } })}
+                onMouseEnter={() => setDockHoverIndex(WORKFORCE.length)}
+                animate={{
+                  scale: dockDetailOpen ? 1 : dockHoverIndex === WORKFORCE.length ? 1.24 : dockHoverIndex === WORKFORCE.length - 1 ? 1.08 : 1,
+                  y: dockDetailOpen ? 0 : dockHoverIndex === WORKFORCE.length ? -12 : 0,
+                }}
+                transition={dockLayoutTransition}
+                className={cn(
+                  'relative shrink-0 border border-dashed border-emerald-300/25 bg-emerald-300/[0.045] text-emerald-200 shadow-[0_10px_24px_rgba(0,0,0,0.25)] hover:border-emerald-300/45 hover:bg-emerald-300/[0.075]',
+                  dockDetailOpen
+                    ? 'flex h-[88px] basis-[190px] items-center gap-3 rounded-2xl px-3 text-left'
+                    : 'flex h-[58px] w-[58px] items-center justify-center rounded-2xl',
+                )}
+                title="添加数字劳动力到当前 Workspace"
+              >
+                <div className={cn(
+                  'flex items-center justify-center rounded-xl border border-emerald-300/25 bg-emerald-300/10',
+                  dockDetailOpen ? 'h-12 w-12 shrink-0' : 'h-11 w-11',
+                )}>
+                  <Plus size={dockDetailOpen ? 22 : 20} />
+                </div>
+                  <motion.div
+                    key="add-detail"
+                    layout
+                    aria-hidden={!dockDetailOpen}
+                    animate={{
+                      opacity: dockDetailOpen ? 1 : 0,
+                      width: dockDetailOpen ? 106 : 0,
+                      x: dockDetailOpen ? 0 : -6,
+                      filter: dockDetailOpen ? 'blur(0px)' : 'blur(3px)',
+                    }}
+                    transition={dockLayoutTransition}
+                    className="min-w-0 overflow-hidden"
+                  >
+                    <p className="text-[12px] font-black text-white">添加席位</p>
+                    <p className="mt-1 text-[9px] text-slate-500">从人才市场招募，或绑定已有数字劳动力</p>
+                    <p className="mt-2 text-[8px] font-bold text-emerald-300">打开配置入口</p>
+                  </motion.div>
+              </motion.button>
+            </motion.div>
+          </motion.div>
 
           {/* VEGA / Agent 浮层 — 可拖动 + 可调整大小 + 翻转 */}
           <AnimatePresence>
